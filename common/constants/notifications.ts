@@ -1,0 +1,1 @@
+export const NOTIFICATION_DISAPPEAR_TIME = 3000;

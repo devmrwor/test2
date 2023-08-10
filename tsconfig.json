@@ -1,0 +1,31 @@
+{
+	"compilerOptions": {
+		"target": "es5",
+		"lib": ["dom", "dom.iterable", "esnext"],
+		"allowJs": true,
+		"skipLibCheck": true,
+		"strict": true,
+		"forceConsistentCasingInFileNames": true,
+		"noEmit": true,
+		"esModuleInterop": true,
+		"module": "esnext",
+		"moduleResolution": "node",
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"jsx": "preserve",
+		"incremental": true,
+		"types": ["next-i18next"],
+
+		"paths": {
+			"@/*": ["./src/*"],
+			"@lib/*": ["./lib/*"],
+			"@config": ["./config"],
+			"@enums": ["./common/enums"],
+			"@types": ["./common/types"],
+			"@models": ["./models"],
+			"@controllers": ["./src/controllers"]
+		}
+	},
+	"include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "lib/sync.ts", "common/constants/social-media.jsx"],
+	"exclude": ["node_modules"]
+}

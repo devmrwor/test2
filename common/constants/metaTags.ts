@@ -1,0 +1,16 @@
+export const metaTags = [
+  "health",
+  "good mood",
+  "beauty",
+  "fitness",
+  "weight loss",
+  "diet",
+  "nutrition",
+  "healthy food",
+  "healthy lifestyle",
+  "haircut",
+  "tag1",
+  "tag2",
+  "hairdresser",
+  "cleaning services",
+];

@@ -1,0 +1,83 @@
+name: Build & Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '18'
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ vars.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build and push Docker CMS image
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        push: true
+        build-args: |
+          NEXT_PUBLIC_ENV_TARGET=cms
+          NEXT_PUBLIC_API_URL=${{ vars[format('NEXT_CMS_PUBLIC_API_URL_{0}', github.ref_name)] }}
+        tags: ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:${{ github.ref_name }}-latest
+
+    - name: Build and push Docker client image
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        push: true
+        build-args: |
+          NEXT_PUBLIC_ENV_TARGET=web
+          NEXT_PUBLIC_API_URL=${{ vars[format('NEXT_PUBLIC_API_URL_{0}', github.ref_name)] }}
+          NEXT_PUBLIC_TELEGRAM_BOT_NAME=${{ vars[format('TELEGRAM_BOT_NAME_{0}', github.ref_name)] }}
+          NEXT_PUBLIC_PLACES_API_KEY=${{ vars[format('GOOGLE_PLACES_API_KEY_{0}', github.ref_name)] }}
+        tags: ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:${{ github.ref_name }}-client
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ vars.AWS_REGION }}
+    
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Deploy to EC2 instance
+      env:
+        AWS_REGION: ${{ vars.AWS_REGION }}
+        DOCKER_EC_REPOSITORY: ${{ vars.DOCKER_EC_REPOSITORY }}
+        AWS_INSTANCE_ID: ${{ vars[format('AWS_INSTANCE_ID_{0}', github.ref_name)] }}
+        DOCKER_IMAGE_NAME: ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}
+        DOCKER_SERVICE_NAME: ${{ vars[format('DOCKER_SERVICE_NAME_{0}', github.ref_name)] }}
+        DOCKER_CMS_IMAGE_TAG: ${{ github.ref_name }}-latest
+        DOCKER_CLIENT_IMAGE_TAG: ${{ github.ref_name }}-client
+      run: bash ./deploy.sh $AWS_INSTANCE_ID $AWS_REGION $DOCKER_IMAGE_NAME $DOCKER_SERVICE_NAME $DOCKER_EC_REPOSITORY $DOCKER_CMS_IMAGE_TAG $DOCKER_CLIENT_IMAGE_TAG
